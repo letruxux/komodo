@@ -52,16 +52,19 @@ export const LogSection = ({
   extraParams?: ReactNode;
 }) => {
   const { toast } = useToast();
+
   const [timestamps, setTimestamps] = useLocalStorage(
     "log-timestamps-v1",
     false
   );
+  const [poll, setPoll] = useLocalStorage("log-poll-v1", false);
+  const [wrap, setWrap] = useLocalStorage("log-wrap-v1", false);
+
   const [stream, setStream] = useState<LogStream>("stdout");
   const [tail, set] = useState("100");
   const [terms, setTerms] = useState<string[]>([]);
   const [invert, setInvert] = useState(false);
   const [search, setSearch] = useState("");
-  const [poll, setPoll] = useLocalStorage("log-poll-v1", false);
 
   const addTerm = () => {
     if (!search.length) return;
@@ -97,6 +100,7 @@ export const LogSection = ({
             </div>
             <Switch checked={invert} onCheckedChange={setInvert} />
           </div>
+
           {terms.map((term, index) => (
             <Button
               key={term}
@@ -108,6 +112,7 @@ export const LogSection = ({
               <X className="w-4 h-h" />
             </Button>
           ))}
+
           <div className="relative">
             <Input
               placeholder="Search Logs"
@@ -128,6 +133,7 @@ export const LogSection = ({
               <X className="w-4 h-4" />
             </Button>
           </div>
+
           <ToggleGroup
             type="single"
             value={stream}
@@ -141,9 +147,12 @@ export const LogSection = ({
               )}
             </ToggleGroupItem>
           </ToggleGroup>
+
           <Button variant="secondary" size="icon" onClick={() => refetch()}>
             <RefreshCw className="w-4 h-4" />
           </Button>
+
+          {/* timestamps */}
           <div
             className="flex items-center gap-2 cursor-pointer"
             onClick={() => setTimestamps((t) => !t)}
@@ -151,6 +160,8 @@ export const LogSection = ({
             <div className="text-muted-foreground text-sm">Timestamps</div>
             <Switch checked={timestamps} />
           </div>
+
+          {/* poll */}
           <div
             className="flex items-center gap-2 cursor-pointer"
             onClick={() => setPoll((p) => !p)}
@@ -158,16 +169,29 @@ export const LogSection = ({
             <div className="text-muted-foreground text-sm">Poll</div>
             <Switch checked={poll} />
           </div>
+
+          <div
+            className="flex items-center gap-2 cursor-pointer"
+            onClick={() => setWrap((w) => !w)}
+          >
+            <div className="text-muted-foreground text-sm">Wrap</div>
+            <Switch checked={wrap} />
+          </div>
+
           <TailLengthSelector
             selected={tail}
             onSelect={set}
             disabled={search.length > 0}
           />
+
           {extraParams}
         </div>
       }
     >
-      {Log}
+      {/* pass wrap down */}
+      {Log && typeof Log === "object"
+        ? Log
+        : Log}
     </Section>
   );
 };
@@ -175,18 +199,23 @@ export const LogSection = ({
 export const Log = ({
   log,
   stream,
+  wrap = false,
 }: {
   log: Types.Log | undefined;
   stream: "stdout" | "stderr";
+  wrap?: boolean;
 }) => {
   const _log = log?.[stream as keyof typeof log] as string | undefined;
   const ref = useRef<HTMLDivElement>(null);
+
   const scroll = () =>
     ref.current?.scroll({
       top: ref.current.scrollHeight,
       behavior: "smooth",
     });
+
   useEffect(scroll, [_log]);
+
   return (
     <>
       <div ref={ref} className="h-[75vh] overflow-y-auto">
@@ -194,9 +223,12 @@ export const Log = ({
           dangerouslySetInnerHTML={{
             __html: _log ? logToHtml(_log) : `no ${stream} logs`,
           }}
-          className="-scroll-mt-24 pb-[20vh]"
+          className={`-scroll-mt-24 pb-[20vh] ${
+            wrap ? "whitespace-pre-wrap break-words" : "whitespace-pre"
+          }`}
         />
       </div>
+
       <Button
         variant="secondary"
         className="absolute top-4 right-4"
